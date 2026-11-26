@@ -1,5 +1,7 @@
 # My couch-tv plan (Sony Bravia Google TV)
 
+Decisions, pending items and security notes: [MY-TV-DECISIONS.md](MY-TV-DECISIONS.md).
+
 Written 17 November 2026 from the walkthrough with Claude. Nothing has been changed on the TV yet.
 
 > **Private notes.** This file has names, the suburb and the TV's network details. Keep it out of a
@@ -294,3 +296,5 @@ drawn at 1080 anyway, so the 4K pictures add little.
   Restart is logged as an unclean shutdown, and Android can lose settings saved in the last 30 minutes.
 - Checked 13:21: Google home at 13:20:59, watch connected 13:21:02, couch-tv on top 13:21:03.
 - Restart in the power menu: one press restarted the TV in two checks (13:15 and the owner's own test).
+- 26 Nov, owner's checks: after a restart the Google home flashes briefly (black, with a Continue watching
+  row), then couch-tv loads on top, not much delay. Restarting while on the **Jio input works**.
