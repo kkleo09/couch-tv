@@ -20,6 +20,7 @@ whenever something is decided, done or left for later.
 | 17 Nov | **Custom 2: per-person Keep watching** for option A, seeded by `home.keep_watching_owners`, "Move to" on hold OK | Option A's Keep watching was one list for the house; app profile names cannot be read | Option B or C (computer or ADB) |
 | 17 Nov | **Custom 3: sleep timer that pauses and switches the TV off** (Home button watch, lock screen action) | The stock timer did nothing while an app played | Device admin "lock now" (harder undo) |
 | 26 Nov | **Fork `kkleo09/couch-tv`, branch `my-tv`, on upstream 0.13.15** | Keep our changes and merge new releases | Plain copy (no merges) |
+| 26 Nov | **`my-tv` is the fork's default branch** | github.com/kkleo09/couch-tv opens on our code; `main` stays an untouched copy of the original | Keep `main` as default |
 | 26 Nov | **Push `config.json` and these notes** (names and suburb are fine to publish) | One place for the setup | Keep them local only |
 | 26 Nov | **Sharp 4K scenes off** (`hi_res: false`) | No measurable gain on a TV that draws at 1080; memory is the TV's limit | Keep 4K |
 | 26 Nov | **Lighter home on** (0.13.15 switched it on by itself) | The TV has 2.4 GB of memory | |
