@@ -914,6 +914,13 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun getSleepRemainingMinutes(): Int = getNativeSleepMinutes()
 
+        // my-tv: the TV's memory, and the TV's power menu to restart it (MemoryTools.kt)
+        @JavascriptInterface
+        fun memInfo(): String = MemoryTools.info(this@MainActivity)
+
+        @JavascriptInterface
+        fun powerMenu(): Boolean = MemoryTools.powerMenu()
+
         @JavascriptInterface
         fun openSettings(): Boolean = startSettings(tvSettingsIntent())
 

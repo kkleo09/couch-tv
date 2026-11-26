@@ -2927,3 +2927,11 @@ html.lighter .wpick.focus { box-shadow: 0 0 0 0.5rem #FFFFFF, 0 0 0 1rem var(--w
 [dir="rtl"] .mk-card { padding: 0 6.25rem 0 5.5rem; }
 [dir="rtl"] .mk-text { margin: 0 0 0 4rem; }
 [dir="rtl"] .mk-brand span { margin: 0 1.25rem 0 0; }
+
+/* my-tv: the Memory quick button always shows its label, white on a dark pill, so it reads on every scene
+   (the Fog scene is almost white); low memory adds an amber dot, never colour alone */
+.qbtns #q-memory:not(.focus) { background: rgba(16, 16, 20, 0.72); color: #fff; }
+.theme-night #q-memory span, html.theme-loop .qbtns #q-memory span { display: inline; position: static; transform: none; color: inherit; }
+.qbtns #q-memory span { margin-left: 0.75rem; font-size: 1.5rem; font-weight: 600; white-space: nowrap; }
+.qbtns #q-memory.low::after { content: ""; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: #F2A33C; margin-left: 0.75rem; }
+.theme-night #q-memory { width: auto; padding: 0 1.75rem; }

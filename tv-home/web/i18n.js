@@ -709,6 +709,7 @@ np_rewind: "Rewind {s}s",
     quick_input: "Input list",
     quick_screensaver: "Screensaver",
     quick_reminder: "Reminders",
+    quick_memory: "Memory",   // my-tv: the TV's memory and Free up memory
     quick_screensaver_sub: "Starts the TV's photo screensaver now. It is not the day and night switch.",
     no_screensaver: "This TV has no screensaver to open.",
     no_dream: "The TV did not start the photos. Try again, or restart the TV if it keeps happening.",

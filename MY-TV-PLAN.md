@@ -262,3 +262,20 @@ Reading: no clear memory saving from turning the 4K scenes off; the differences 
 run noise of these measurements. JioHotstar took 5.6 s twice in a row on 0.13.15, so that app itself got
 slower to start (its own update or cache), not couch-tv. Kept `hi_res: false`: on this TV the screens are
 drawn at 1080 anyway, so the 4K pictures add little.
+
+## Memory button (custom change 4, 26 November 2026)
+
+- **Memory quick button** (top right): always shows what apps can still get, white on a dark pill, for
+  example "Memory · 929 MB free"; "Memory low · 898 MB free" with an amber dot when under 600 MB is
+  available or the overflow memory (swap) is more than 80% used.
+- **OK on it** (or Home settings, About, Memory) opens "The TV's memory": available, total and overflow
+  used, then **Restart the TV** (opens the TV's own power menu: press down twice to Restart, not Lockdown)
+  or **Not now**.
+- **Low memory** asks the same by itself, a few seconds after coming back to the home, at most every
+  4 hours, never while the rows are faded or an app is in front.
+- **Why restart and not "close apps":** this Sony's Android 12 lets no app close another app's processes
+  (ActivityManager logs "Invalid packageName" for each; standard Android added that rule only in 14). Only
+  the TV's debug connection can (from the Mac, closing YouTube and JioHotstar freed about 190 MB). A later
+  option: let couch-tv use the TV's own debug connection, as the option C app does.
+- Files: `MemoryTools.kt`, the Memory block in `tv-home/web/app.js`, `#q-memory` in `app.css`,
+  `quick_memory` in `i18n.js`, `memory` in `QUICK_IDS` (`bridge/config.py`), and `config.json`.

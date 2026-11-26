@@ -76,7 +76,7 @@
   // no made up town. The weather tiles ask for a town instead (widgets.js noWx), never a sample place.
   var WX_NONE = { lat: null, lon: null, place: "", timezone: "auto" };
   var WXCFG = WX_NONE;
-  var QUICK_ALL = ["sleep", "picture", "look", "soundscape", "screen_off", "headphones", "input", "bluetooth", "network", "tvsettings", "screensaver", "extend", "reminder"];
+  var QUICK_ALL = ["sleep", "picture", "look", "soundscape", "screen_off", "headphones", "input", "bluetooth", "network", "tvsettings", "screensaver", "extend", "reminder", "memory"];
   // The most personal photos this TV keeps (also MAX_PHOTOS in bridge/server.py and MainActivity.kt).
   var MAX_PHOTOS = 50;
   var ON_TV = false;   // served by the on-TV app (config "mode"), which can open the TV's own settings screens
@@ -442,6 +442,7 @@
   var HOLD_MS = 600;    // how long OK is held to pick something up
 
   var ICONS = {
+    memory: '<svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="2"/><path d="M9.5 9.5h5v5h-5zM9 2.5v3M15 2.5v3M9 18.5v3M15 18.5v3M2.5 9h3M2.5 15h3M18.5 9h3M18.5 15h3"/></svg>',
     screen: '<svg viewBox="0 0 24 24"><rect x="2.5" y="3.5" width="19" height="13" rx="2"/><path d="M9 20.5h6M12 16.5v4"/></svg>',
     moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
     picture: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" class="fill"/></svg>',
@@ -3678,6 +3679,7 @@
       if (q === "tvsettings") return !!(TV && (TV.launch || TV.openSettings)) || !OFFLINE;
       if (q === "extend") return devOn();
       if (q === "reminder") return !!window.Reminders;
+      if (q === "memory") return !!(TV && TV.memInfo);   // my-tv
       return false;
     }
   }
@@ -3736,6 +3738,9 @@
         el.innerHTML = ICONS[q] + "<span>" + esc(t(q)) + "</span>";
       } else if (q === "tvsettings") {
         el.innerHTML = ICONS.gear + "<span>" + esc(t("gear_tv")) + "</span>";
+      } else if (q === "memory") {   // my-tv
+        el.innerHTML = ICONS.memory + "<span>" + esc(memLabel()) + "</span>";
+        el.classList.toggle("low", memIsLow(memRead()));
       } else if (q === "reminder") {
         el.innerHTML = ICONS.reminder + "<span>" + esc(t("quick_reminder")) + "</span>";
         el.setAttribute("aria-label", t("quick_reminder"));
@@ -4061,7 +4066,63 @@
     else if (q === "bluetooth" || q === "network") openSettingsScreen(q);
     else if (q === "tvsettings") openTvSettings();
     else if (q === "reminder") openReminders();
+    else if (q === "memory") memDialog();   // my-tv
   }
+
+  // ---------------- my-tv: the TV's memory (MemoryTools.kt in the launcher) ----------------
+  // The Memory quick button always says how much memory apps can still get ("Memory · 1.0 GB free"),
+  // in white on a dark pill so it reads on every scene. OK, Home settings, About, and a question when
+  // memory runs low (under 600 MB available, or the overflow memory more than 80% used: asked at most
+  // every 4 hours, only while the home is in front with its rows showing) all offer the same thing:
+  // restart the TV through its own power menu. This Sony's Android lets no app close other apps
+  // (ActivityManager logs "Invalid packageName"), and a restart frees the most memory anyway.
+  var MEM_LOW_KB = 600 * 1024, MEM_ASK_EVERY = 4 * 3600 * 1000;
+  function memRead() { try { return TV && TV.memInfo ? JSON.parse(TV.memInfo()) : null; } catch (e) { return null; } }
+  function memText(kb) { kb = Math.max(0, kb || 0); return kb >= 1048576 ? (kb / 1048576).toFixed(1) + " GB" : Math.round(kb / 1024) + " MB"; }
+  function memIsLow(m) { return !!m && (m.avail < MEM_LOW_KB || (m.swap_total > 0 && m.swap_free < m.swap_total * 0.2)); }
+  function memLabel() {
+    var m = memRead();
+    if (!m) return "Memory";
+    return (memIsLow(m) ? "Memory low \u00b7 " : "Memory \u00b7 ") + memText(m.avail) + " free";
+  }
+  function memLine(m) {
+    if (!m) return "";
+    var swapUsed = Math.max(0, (m.swap_total || 0) - (m.swap_free || 0));
+    return memText(m.avail) + " available of " + memText(m.total) + ". Overflow memory: " + memText(swapUsed) + " of " + memText(m.swap_total) + " used.";
+  }
+  // the question: from the button, About, or by itself when memory is low
+  function memDialog() {
+    askKind = "mem"; zone = "updask"; ai = 0;
+    clearFocus();
+    renderAsk();
+  }
+  function memRestart() {
+    var ok = false;
+    try { ok = !!(TV && TV.powerMenu && TV.powerMenu()); } catch (e) {}
+    toast(ok ? "In the menu, press down twice to Restart, then OK. Not Lockdown. The TV is back in about a minute and a half, with its memory freed."
+      : "Restart from Settings, System, Restart to free the TV's memory.");
+  }
+  function memAsk() {
+    if (!TV || !TV.memInfo || document.hidden || PAGE_PAUSED || idlePhotoActive || kidsOn()) return;
+    if (zone !== "grid" && zone !== "shelf" && zone !== "people" && zone !== "quick") return;
+    if (updSheetUp()) return;
+    if (Date.now() - (Number(kept("tvhome.mem.lastask")) || 0) < MEM_ASK_EVERY) return;
+    if (!memIsLow(memRead())) return;
+    keep("tvhome.mem.lastask", String(Date.now()));
+    memDialog();
+  }
+  setInterval(function () {
+    if (quickReady && quickVisible().indexOf("memory") >= 0 && !document.hidden) renderQuick();
+    memAsk();
+  }, 60000);
+  // and a few seconds after the home comes back to the front (back from an app, or Home pressed):
+  // the moment someone is looking at the home, before the rows fade
+  var memSoon = 0;
+  function memAskSoon() {
+    clearTimeout(memSoon);
+    memSoon = setTimeout(function () { if (quickReady) renderQuick(); memAsk(); }, 4000);
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) memAskSoon(); });
 
   // ---------------- reminders (reminders.js): said into the remote's mic, kept on this TV ----------------
   var remPrev = "quick";
@@ -7834,11 +7895,21 @@
       info("ver", t("about_version"), ver || t("about_web")),
       info("code", t("about_code"), REPO_URL),
       info("run", t("about_running"), t(run)),
+      memAboutRow(),
       info("kept", t("about_kept"), t(OFFLINE || ON_TV || data.bridge === false ? "kept_tv" : "kept_both")),
       { kind: "action", key: "restart", label: t("about_restart"), sub: t("about_restart_sub"), act: restartHome },
       { kind: "action", key: "reset", label: t("about_reset"), sub: t("about_reset_sub"), danger: true, confirmText: t("confirm_reset"),
         act: resetSettings }
     ]);
+  }
+  // my-tv: Home settings, About, the TV's memory: OK frees it like the Memory button
+  function memAboutRow() {
+    var m = memRead();
+    if (!m) return info("mem", "Memory", "", "Not available here");
+    var swapUsed = Math.max(0, (m.swap_total || 0) - (m.swap_free || 0));
+    return { kind: "action", key: "mem", label: "Memory: " + memText(m.avail) + " available, " + memText(m.free) + " completely free",
+      sub: "Of " + memText(m.total) + ". Overflow memory used: " + memText(swapUsed) + " of " + memText(m.swap_total) + ". OK: restart the TV to free it.",
+      act: function () { memRestart(); } };
   }
   // About, Restart home: the launcher starts a new page and looks for the bridge again, as a
   // force-stop would. Anywhere else (a browser, the on-TV app, an older launcher) the page reloads.
@@ -7950,18 +8021,27 @@
     if (askKind === "home") {
       return [[ICONS.apps, t("home_ask_yes"), t("home_ask_yes_sub")], [ICONS.sliders, t("home_ask_no"), t("home_ask_no_sub")]];
     }
+    if (askKind === "mem") {   // my-tv
+      return [[ICONS.memory, "Restart the TV", "Opens the TV's power menu: choose Restart. About a minute and a half, and frees the most memory."],
+        [ICONS.sliders, "Not now", "Asks again in a few hours if memory is still low."]];
+    }
     return [[ICONS.download, t("upd_ask_yes"), t("upd_ask_yes_sub")], [ICONS.sliders, t("upd_ask_no"), t("upd_ask_no_sub")]];
   }
   function askHead() {
     if (askKind === "dev") return ["dev_ask", "dev_ask_sub"];
     if (askKind === "home") return ["home_ask", "home_ask_sub"];
+    if (askKind === "mem") {   // my-tv: plain text, not translation keys
+      var m = memRead();
+      return [memIsLow(m) ? "The TV is low on memory" : "The TV's memory", memLine(m) + (memIsLow(m) ? " Apps may feel slow until it is freed." : "")];
+    }
     return ["upd_ask", "upd_ask_sub"];
   }
   function renderAsk() {
     var pop = $("gear-pop");
     var head = askHead();
     var items = askRows();
-    pop.innerHTML = '<div class="ask-h"><b>' + esc(t(head[0])) + "</b><small>" + esc(t(head[1])) + "</small></div>" +
+    var tt = askKind === "mem" ? function (x) { return x; } : t;   // my-tv: the memory question is plain text
+    pop.innerHTML = '<div class="ask-h"><b>' + esc(tt(head[0])) + "</b><small>" + esc(tt(head[1])) + "</small></div>" +
       items.map(function (it, i) {
         return '<div class="grow' + (i === ai ? " focus" : "") + '" role="menuitem"><i>' + it[0] + "</i><span><b>" +
           esc(it[1]) + "</b><small>" + esc(it[2]) + "</small></span></div>";
@@ -7974,6 +8054,12 @@
     $("gear-pop").classList.remove("on", "ask");
     document.documentElement.classList.remove("gearing");
     zone = "grid";
+    if (askKind === "mem") {   // my-tv
+      startFocus();
+      paintFocus();
+      if (yes) memRestart();
+      return;
+    }
     if (askKind === "home") {
       keep("tvhome.home.asked", 1);
       startFocus();
@@ -10076,7 +10162,7 @@
   // the native side calls these
   // Home on the remote also re-reads the lists, so an order arranged on the phone shows straight away
   window.tv = { back: function () { if (window.CouchAsk && window.CouchAsk.back && window.CouchAsk.back()) return; if (typeof CouchShare !== "undefined" && CouchShare.close()) return; if (typeof CouchDesign !== "undefined" && CouchDesign.back && CouchDesign.back()) return; if (idleAmbientActive) { setIdleAmbient(false); resetSmartIdle(); return; } if (idlePhotoInput(null)) return; goHome(); resetIdlePhoto(); resetSmartIdle(); },
-    home: function () { forgetFocus(); updFront(); if (zone === "welcome") return;   // the first-run welcome stays until it is answered
+    home: function () { forgetFocus(); updFront(); memAskSoon(); if (zone === "welcome") return;   // the first-run welcome stays until it is answered
       if (zone === "makeit") { makeitClose(); return; }
       clipWake(); if (idleAmbientActive) { setIdleAmbient(false); resetSmartIdle(); return; } if (idlePhotoInput(null)) return; if (zone === "settings") closeSettings(); else goHome(); refresh(); resetIdlePhoto(); resetSmartIdle(); },
     screenOff: function () { toggleScreenOff(true); },
@@ -10092,7 +10178,7 @@
     phoneLink: function () { PHONE_QR.url = ""; phoneQr(); if (typeof CouchDesign !== "undefined" && CouchDesign.nav && CouchDesign.nav.phoneAgain) CouchDesign.nav.phoneAgain(); },
     // also the on-TV app's HomeActivity.refresh() after a phone or setup save, with the home already in front
     // and never paused: that redraws, but only a resume after tv.pause() is the home coming to the front
-    resume: function () { var front = PAGE_PAUSED; PAGE_PAUSED = false; clock(); designVideo("away", false); toggleScreenOff(false); setIdleAmbient(false); resetSmartIdle(); okReset(); refresh(); if (!OFFLINE) refreshQuick(); refreshWeather(); startVideo(); clipWake(); sceneVideos(true); refreshMusic(); refreshCards(true); if (window.AmbientWeather) window.AmbientWeather.resume(); resetIdlePhoto(); kwArtAgain(); if (front) { updFront(); makeitSchedule(MAKEIT_CALM); } setupDesign(); if (front) inboxAsk("front"); },
+    resume: function () { var front = PAGE_PAUSED; PAGE_PAUSED = false; clock(); designVideo("away", false); toggleScreenOff(false); setIdleAmbient(false); resetSmartIdle(); okReset(); refresh(); if (!OFFLINE) refreshQuick(); refreshWeather(); startVideo(); clipWake(); sceneVideos(true); refreshMusic(); refreshCards(true); if (window.AmbientWeather) window.AmbientWeather.resume(); resetIdlePhoto(); kwArtAgain(); if (front) { updFront(); memAskSoon(); makeitSchedule(MAKEIT_CALM); } setupDesign(); if (front) inboxAsk("front"); },
     // an app is in front: the video background stops until the home is back
     // (and a design's video background lets go of the TV's decoder, which the app may need)
     pause: function () { if (zone === "makeit") makeitClose(); saveFocusNow(); PAGE_PAUSED = true; pauseVideo(); designVideo("away", true); inboxAway(); },
