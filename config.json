@@ -20,7 +20,7 @@
     "sun_sync": true,
     "ambient_weather": true,
     "ambient_sun_grade": true,
-    "hi_res": "always",
+    "hi_res": false,
     "language": "en",
     "clock": "12h",
     "wx_unit": "c",

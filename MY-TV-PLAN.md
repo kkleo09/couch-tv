@@ -247,3 +247,18 @@ step aside for 5 minutes, and the Google home takes over.
 Reading: start-up and Home are as quick or quicker; YouTube and Netflix opened a little faster. The new
 home uses noticeably more memory (272 MB), so with YouTube, JioHotstar and Netflix in memory the TV's
 swap fills sooner. Next to try: `home.hi_res` off (the sharp 4K scenes cost about 65 MB).
+
+**Then: 0.13.15 + ours with `hi_res: false`** (26 Nov 11:45), same tests:
+
+| Test | Result |
+|---|---|
+| Restart → Android ready | 75 s; couch-tv on screen 1 s later (first draw 2.9 s) |
+| Home press from an app → couch-tv | 0.7 s, 0.26 s, 0.2 s |
+| Open YouTube / JioHotstar / Netflix from scratch | 2.1 s / 5.6 s / 2.2 s |
+| Free memory just after restart | 1.22 GB, swap 273 MB free (couch-tv 189 MB + its page 97 MB) |
+| Free memory after the 3 apps | 0.87 GB, swap 203 MB free; couch-tv 295 MB |
+
+Reading: no clear memory saving from turning the 4K scenes off; the differences are within the run to
+run noise of these measurements. JioHotstar took 5.6 s twice in a row on 0.13.15, so that app itself got
+slower to start (its own update or cache), not couch-tv. Kept `hi_res: false`: on this TV the screens are
+drawn at 1080 anyway, so the 4K pictures add little.
