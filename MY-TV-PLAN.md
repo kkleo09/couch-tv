@@ -193,7 +193,7 @@ The 6 names: `com.google.android.apps.tv.dreamx` (ambient mode), `com.google.and
 **5. Put couch-tv back afterwards** (same settings, from `config.json`):
 
 ```sh
-TV_IP=192.168.29.202 APK=dist/couch-tv-home.apk TV_ID=living-room PRIVACY=1 sh tv-home/tools/apply.sh
+TV_IP=192.168.29.202 APK=dist/couch-tv-home.apk TV_ID=living-room PRIVACY=1 SCREEN_TIME=1 sh tv-home/tools/apply.sh
 ```
 
 The app order (Jio first) lives on the TV, so after a full removal it has to be arranged again.
@@ -279,3 +279,18 @@ drawn at 1080 anyway, so the 4K pictures add little.
   option: let couch-tv use the TV's own debug connection, as the option C app does.
 - Files: `MemoryTools.kt`, the Memory block in `tv-home/web/app.js`, `#q-memory` in `app.css`,
   `quick_memory` in `i18n.js`, `memory` in `QUICK_IDS` (`bridge/config.py`), and `config.json`.
+
+## couch-tv on top after a restart (custom change 5, 26 November 2026)
+
+- **Problem:** after a restart the TV sometimes stayed on the Google TV home. At start-up the Google home
+  comes up first and the Home button watch connects 2 to 4 s later; when the watch connects too late it
+  never sees the Google home arrive (seen at 12:52, after a power cut). couch-tv's own start-up rule covers
+  only Fire TV and TCL, on purpose, so a TV that starts on an HDMI input is never covered.
+- **Fix:** in the first 2 minutes after a restart, the watch looks at Android's record of which app came to
+  the front last (usage access, granted by `apply.sh` with `SCREEN_TIME=1`), at 1.5, 4, 8, 15 and 30 s:
+  the Google home puts couch-tv on top; an HDMI input (the Jio box), live TV or any app is left alone;
+  Android's start-up placeholder (FallbackHome) means look again. Without usage access nothing changes.
+- **Always run apply.sh with `SCREEN_TIME=1` on this TV**, then `appops write-settings` over ADB: Sony's
+  Restart is logged as an unclean shutdown, and Android can lose settings saved in the last 30 minutes.
+- Checked 13:21: Google home at 13:20:59, watch connected 13:21:02, couch-tv on top 13:21:03.
+- Restart in the power menu: one press restarted the TV in two checks (13:15 and the owner's own test).

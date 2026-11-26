@@ -89,7 +89,48 @@ class FireWatch : AccessibilityService() {
             SystemClock.elapsedRealtime() < BOOT_WINDOW_MS && !CrashGuard.standingAside(this)) {
             Log.i("couchtv.firewatch", "bound just after a restart: putting couch-tv in front")
             runCatching { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        } else if (SystemClock.elapsedRealtime() < BOOT_WINDOW_MS && !CrashGuard.standingAside(this)) {
+            // my-tv: any other TV just after a restart. The TV's own home can come up before this service
+            // is bound (a Sony BRAVIA after a cold start: the Google home at +0 s, the watch 2 s later), so
+            // its window event is never seen and the Google home stays. With usage access (apply.sh
+            // SCREEN_TIME=1) look at which app came to the front last: the TV's own home puts couch-tv on
+            // top; an HDMI input, live TV or any app is left alone. Without usage access nothing changes.
+            bootTries = 0
+            handler.postDelayed({ bootCheck() }, 1500)
         }
+    }
+
+    /** my-tv: see onServiceConnected. Reads only Android's own record of which app came to the front.
+     *  Looks again at 1.5, 4, 8, 15 and 30 s after binding: at boot Android first shows its start-up
+     *  placeholder (Settings' FallbackHome), then the Google home, so the first look can be too early. */
+    private var bootTries = 0
+    private fun bootCheck() {
+        if (MainActivity.isInFront() || CrashGuard.standingAside(this)) return
+        val last = runCatching {
+            val usm = getSystemService(android.app.usage.UsageStatsManager::class.java)
+            val now = System.currentTimeMillis()
+            val events = usm.queryEvents(now - 3 * 60_000L, now)
+            val e = android.app.usage.UsageEvents.Event()
+            var found: Pair<String, String?>? = null
+            while (events.hasNextEvent()) {
+                events.getNextEvent(e)
+                if (e.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) found = e.packageName to e.className
+            }
+            found
+        }.getOrNull()
+        val placeholder = last?.second == "com.android.tv.settings.system.FallbackHome"
+        when {
+            last != null && isStockHome(last.first, last.second) -> {
+                Log.i("couchtv.firewatch", "after a restart: the TV's own home is in front: putting couch-tv on top")
+                runCatching { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                return
+            }
+            last != null && !placeholder -> { Log.i("couchtv.firewatch", "after a restart: ${last.first} is in front: left alone"); return }
+        }
+        val waits = longArrayOf(2500, 4000, 7000, 15000)
+        if (bootTries < waits.size) {
+            handler.postDelayed({ bootCheck() }, waits[bootTries++])
+        } else Log.i("couchtv.firewatch", "after a restart: " + (if (last == null) "no usage access, or nothing in front" else "still on the start-up screen") + ": left as it is")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
