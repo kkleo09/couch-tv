@@ -209,3 +209,41 @@ this Mac's key for the TV.
 **Last resort:** factory reset (Settings → System → About → Reset). It wipes every app and login.
 
 Full guide: [docs/UNINSTALL.md](docs/UNINSTALL.md).
+
+## Benchmark (26 November 2026)
+
+**Before: the 17 November build** (main of 17 Nov plus our changes), after Google app updates and a TV restart.
+
+| Test | Result |
+|---|---|
+| Restart → Android ready | 93 s (Sony's own start-up) |
+| Android ready → couch-tv on screen | about 1 s, by itself (first draw 2.8 s) |
+| Home press from an app → couch-tv started | 0.2 to 0.35 s (one press in three bounced: about 2.5 s) |
+| Open YouTube from scratch | 2.6 s |
+| Open JioHotstar from scratch | 2.8 s |
+| Open Netflix from scratch | 1.9 s |
+| Free memory, 4 min after restart | 1.17 GB free, swap 290 of 600 MB free |
+| Free memory after opening 3 apps | 0.97 GB free, swap 200 MB free |
+
+Biggest memory users: YouTube 344 MB, JioHotstar 302 MB, Google TV home 224 MB (kept on for safety;
+it flashes up on every Home press), Google services 212 MB, Netflix 207 MB.
+Do not benchmark by restarting couch-tv repeatedly: two restarts in 3 minutes make its crash guard
+step aside for 5 minutes, and the Google home takes over.
+
+**After: 0.13.15 + our changes** (installed 26 Nov 11:37; it switched Lighter home on by itself), same tests.
+
+| Test | Before (17 Nov build) | After (0.13.15 + ours) |
+|---|---|---|
+| Restart → Android ready | 93 s | 76 s (Sony's start-up varies) |
+| Android ready → couch-tv on screen | about 1 s (first draw 2.8 s) | about 1 s (first draw 2.2 s) |
+| Home press from an app → couch-tv | 0.35 s (bounced, 2.5 s in all), 0.3 s, 0.2 s | 0.2 s, 0.12 s, 1.35 s |
+| Open YouTube from scratch | 2.6 s | 2.0 s |
+| Open JioHotstar from scratch | 2.8 s | 5.6 s (one run; JioHotstar varies) |
+| Open Netflix from scratch | 1.9 s | 1.55 s |
+| Free memory just after restart | 1.17 GB, swap 290 MB free | 1.20 GB, swap 268 MB free |
+| Free memory after the 3 apps | 0.97 GB, swap 200 MB free | 0.94 GB, swap 138 MB free |
+| couch-tv's own memory | about 110 MB (page) | 272 MB (the home app) |
+
+Reading: start-up and Home are as quick or quicker; YouTube and Netflix opened a little faster. The new
+home uses noticeably more memory (272 MB), so with YouTube, JioHotstar and Netflix in memory the TV's
+swap fills sooner. Next to try: `home.hi_res` off (the sharp 4K scenes cost about 65 MB).
