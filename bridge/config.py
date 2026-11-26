@@ -542,6 +542,16 @@ def _home(h):
         out["ambient_sun_grade"] = h["ambient_sun_grade"]
     if h.get("nav_sound") in ("system", "soft", "off"):
         out["nav_sound"] = h["nav_sound"]
+    # my-tv: who each Keep watching show belongs to at first (option A, per-person Keep watching)
+    kwo = h.get("keep_watching_owners")
+    if isinstance(kwo, list):
+        owners = []
+        for e in kwo[:100]:
+            if isinstance(e, dict) and isinstance(e.get("title"), str) and isinstance(e.get("person"), str):
+                title, person = e["title"].strip()[:120], e["person"].strip()[:64]
+                if title and re.match(r"^[A-Za-z0-9_-]+$", person):
+                    owners.append({"title": title, "person": person})
+        out["keep_watching_owners"] = owners
     # where the remote starts on Home: people (default, as before), keep_watching or apps (#211)
     if h.get("start_focus") in ("people", "apps", "keep_watching"):
         out["start_focus"] = h["start_focus"]

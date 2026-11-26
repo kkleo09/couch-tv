@@ -4132,7 +4132,8 @@
   // ---------------- who is watching: none, a pill switch for two, a head icon and a list for more ----------------
   var PALETTE = ["#ff9f0a", "#30b350", "#0a84ff", "#bf5af2", "#ff375f", "#00a5a8", "#5e5ce6", "#ac8e68"];
   function peopleCount() { return NOBODY ? 0 : PEOPLE.length; }
-  function isHead() { return peopleCount() >= 3; }
+  // my-tv: up to three names sit side by side in the pill; four or more get the round head icon.
+  function isHead() { return peopleCount() >= 4; }
   function colourOf(p) {
     if (p.colour) return p.colour;
     for (var h = 0, i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) >>> 0;
@@ -4154,8 +4155,8 @@
   function renderPeople() {
     var el = $("people"), n = peopleCount();
     el.classList.toggle("none", n < 2);
-    el.classList.toggle("head", n >= 3);
-    if (n >= 3) {
+    el.classList.toggle("head", isHead());
+    if (isHead()) {
       var cur = PEOPLE[whoIndex()];
       el.innerHTML = avatarHTML(cur) + '<span class="sr">' + esc(cur.name) + "</span>";
     } else {
@@ -4830,6 +4831,10 @@
       { act: "dismiss", label: t("ctx_remove_shelf") || "Remove from Keep watching" },
       { act: "cancel", label: t("cancel") || "Cancel" }
     ];
+    // my-tv: per-person Keep watching (option A): hand this card to someone else
+    if (OFFLINE && it.wn && peopleCount() > 1) PEOPLE.forEach(function (p) {
+      if (p.id !== who) smItems.splice(smItems.length - 1, 0, { act: "move", to: p.id, label: "Move to " + p.name });
+    });
     zone = "shelfmenu";
     renderShelfMenu();
     return true;
@@ -4860,6 +4865,7 @@
     if (it.act === "dismiss") {
       dismissShow(show);
     }
+    if (it.act === "move") kwMove(show, it.to);   // my-tv
   }
   function dismissShow(it) {
     var id = String(it.id || "");
@@ -9121,6 +9127,53 @@
     }
   }
 
+  // ---------------- my-tv: per-person Keep watching with no computer (option A) ----------------
+  // Android's Watch Next list is one list for the whole TV. Here each card belongs to one person:
+  // home.keep_watching_owners in config.json ([{"title": "...", "person": "<id>"}]) seeds it by
+  // title, a card nobody owns yet goes to whoever is picked when it is first seen, and holding OK
+  // on a card offers "Move to <name>". Who wins: a move made with the remote (tvhome.kw_moved), then
+  // the config list, then the person picked when the card was first seen (tvhome.kw_auto). So the
+  // config list always beats a guess, also one made before the list reached the TV.
+  function kwNorm(s) {
+    s = String(s || "");
+    try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (e) {}
+    return s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
+  }
+  function kwSig(it) { return ((it.app && it.app.package) || it.package || "") + "|" + kwNorm(it.title); }
+  function kwSeed(title) {
+    var list = (window.COUCH_CONFIG && window.COUCH_CONFIG.home && window.COUCH_CONFIG.home.keep_watching_owners) || [];
+    var n = " " + kwNorm(title) + " ";
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i] || {}, m = kwNorm(e.title);
+      // whole words either way: "Lord of the Rings" finds "The Lord of the Rings: The Rings of Power"
+      if (m && personById(e.person) && (n.indexOf(" " + m + " ") >= 0 || (" " + m + " ").indexOf(n) >= 0)) return e.person;
+    }
+    return null;
+  }
+  function kwOwners(cards) {
+    var moved = kept("tvhome.kw_moved") || {}, auto = kept("tvhome.kw_auto") || {}, own = {}, changed = false;
+    var fallback = personById(who) ? who : (PEOPLE[0] && PEOPLE[0].id);
+    cards.forEach(function (it) {
+      var sig = kwSig(it), p = personById(moved[sig]) ? moved[sig] : kwSeed(it.title);
+      if (!p && personById(auto[sig])) p = auto[sig];
+      if (!p && fallback) { p = auto[sig] = fallback; changed = true; }
+      if (p) own[sig] = p;
+    });
+    if (changed) keep("tvhome.kw_auto", auto);
+    return own;
+  }
+  function kwMove(it, to) {
+    var moved = kept("tvhome.kw_moved") || {}, p = personById(to);
+    if (!p) return;
+    moved[kwSig(it)] = to;
+    keep("tvhome.kw_moved", moved);
+    status("Moved " + (it.title || "") + " to " + p.name, true);
+    refreshNow().then(function () {
+      if (!shelfEls.length) { zone = "grid"; g = 0; } else s = Math.max(0, Math.min(s, shelfEls.length - 1));
+      paintFocus();
+    });
+  }
+
   function sendWatchNext() {
     if (!TV || !TV.watchNext) return Promise.resolve();
     var rows = [];
@@ -9163,7 +9216,11 @@
           var sig = pkg + "|" + (it.title || "");
           return skipPkgs.indexOf(pkg) === -1 && dismissed.indexOf(id) === -1 && dismissed.indexOf(sig) === -1;
         });
-        PEOPLE.forEach(function (p) { data.showsBy[p.id] = wn; });
+        if (peopleCount() > 1) {
+          // my-tv: each card belongs to one person (kwOwners), and each person sees only theirs
+          var own = kwOwners(wn);
+          PEOPLE.forEach(function (p) { data.showsBy[p.id] = wn.filter(function (it) { return own[kwSig(it)] === p.id; }); });
+        } else PEOPLE.forEach(function (p) { data.showsBy[p.id] = wn; });
       }
       detectNew();
       status(ALONE ? "" : t("computer_off"), true);

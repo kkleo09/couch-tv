@@ -1870,8 +1870,6 @@ class MainActivity : Activity() {
         return null
     }
 
-    private var nativeSleepTimer: Runnable? = null
-    private var nativeSleepEndMs: Long = 0L
 
     private fun dismissWatchNextItem(id: String, pkg: String, title: String): Boolean {
         if (id.isBlank() && pkg.isBlank()) return false
@@ -1886,34 +1884,11 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun setNativeSleepTimer(minutes: Int): Boolean {
-        nativeSleepTimer?.let { main.removeCallbacks(it) }
-        nativeSleepTimer = null
-        if (minutes <= 0) {
-            nativeSleepEndMs = 0L
-            return true
-        }
-        nativeSleepEndMs = System.currentTimeMillis() + (minutes * 60 * 1000L)
-        val runnable = Runnable {
-            nativeSleepEndMs = 0L
-            main.post {
-                if (!startAmbientNow()) {
-                    val i = Intent(AMBIENT_SETTINGS)
-                    if (packageManager.resolveActivity(i, 0) != null) start(i)
-                }
-            }
-        }
-        nativeSleepTimer = runnable
-        main.postDelayed(runnable, minutes * 60 * 1000L)
-        return true
-    }
+    // my-tv: the countdown and the switch-off live in SleepTimer.kt (pause, then sleep the TV through
+    // the Home button watch), so they survive a long show in another app.
+    private fun setNativeSleepTimer(minutes: Int): Boolean = SleepTimer.set(this, minutes)
 
-    private fun getNativeSleepMinutes(): Int {
-        if (nativeSleepEndMs <= 0L) return 0
-        val diff = nativeSleepEndMs - System.currentTimeMillis()
-        if (diff <= 0L) return 0
-        return ((diff + 59999L) / 60000L).toInt()
-    }
+    private fun getNativeSleepMinutes(): Int = SleepTimer.remainingMinutes(this)
 
     /** The picture behind a Watch Next card: a web address or a content address the page cannot read itself. */
     private fun watchNextArt(token: String): ByteArray? {
@@ -2216,6 +2191,12 @@ class MainActivity : Activity() {
         fun backToFirstTile() {
             val a = shown?.get() ?: return
             a.main.post { if (!a.isFinishing && !a.isDestroyed) a.js("window.tv && tv.home()") }
+        }
+
+        /** my-tv: the sleep timer's fallback when the Home button watch cannot sleep the TV: the old screensaver timeout. */
+        fun sleepFallback() {
+            val a = shown?.get() ?: return
+            a.main.post { if (!a.isFinishing && !a.isDestroyed) a.startAmbientNow() }
         }
 
         /** A TV's name, as apply.sh passes it: small letters, digits and dashes. */

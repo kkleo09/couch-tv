@@ -1,0 +1,61 @@
+{
+  "default_tv": "living-room",
+  "tvs": [
+    {
+      "id": "living-room",
+      "name": "Living room",
+      "ip": "192.168.29.202",
+      "adb_port": 5555,
+      "quick": ["input", "tvsettings", "sleep"]
+    }
+  ],
+  "people": [
+    { "id": "anirudh", "name": "Anirudh", "kid": true },
+    { "id": "karthik", "name": "Karthik" },
+    { "id": "anija", "name": "Anija" }
+  ],
+  "home": {
+    "look": "night",
+    "scenes": ["night", "golden", "water", "fog", "dawn"],
+    "sun_sync": true,
+    "ambient_weather": true,
+    "ambient_sun_grade": true,
+    "hi_res": "always",
+    "language": "en",
+    "clock": "12h",
+    "wx_unit": "c",
+    "inputs": [{ "port": 1, "label": "Jio", "icon": "cable" }],
+    "start_focus": "people",
+    "keep_watching_owners": [
+      { "title": "The Lord of the Rings", "person": "karthik" },
+      { "title": "Pokemon", "person": "anirudh" },
+      { "title": "Daayra", "person": "karthik" },
+      { "title": "Cars", "person": "anirudh" },
+      { "title": "Sonic", "person": "anirudh" },
+      { "title": "Papa Yaar", "person": "karthik" },
+      { "title": "Shark Tank", "person": "karthik" },
+      { "title": "Minions", "person": "anirudh" },
+      { "title": "Good Witch", "person": "anija" },
+      { "title": "Sapne vs Everyone", "person": "karthik" }
+    ],
+    "idle_photo_seconds": 60,
+    "keep_watching": true,
+    "glass": "on",
+    "glass_icons": false,
+    "clock_style": "liquid",
+    "dock": "classic",
+    "nav_sound": "soft",
+    "updates": "manual",
+    "dock_size": 10,
+    "hide_packages": []
+  },
+  "phone_remote": false,
+  "ask": { "enabled": false },
+  "weather": {
+    "lat": 10.01636,
+    "lon": 76.34168,
+    "place": "Kakkanad",
+    "timezone": "Asia/Kolkata"
+  },
+  "country": "IN"
+}

@@ -68,6 +68,8 @@ class FireWatch : AccessibilityService() {
 
     override fun onServiceConnected() {
         connected = true
+        instance = this
+        SleepTimer.schedule(this)   // my-tv: a sleep timer set before a restart of the app carries on
         // Key filtering is switched on at run time and only on Xiaomi and KTC/JVC, so no other TV sees key presses here.
         if (catchesHomeKey()) runCatching {
             serviceInfo = serviceInfo.also { it.flags = it.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS }
@@ -92,6 +94,7 @@ class FireWatch : AccessibilityService() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         connected = false
+        if (instance === this) instance = null
         handler.removeCallbacks(recheck)
         recheckPending = false
         return super.onUnbind(intent)
@@ -188,6 +191,8 @@ class FireWatch : AccessibilityService() {
     companion object {
         /** Set while Android has this service bound. */
         @Volatile var connected = false
+        /** my-tv: the bound watch, for the sleep timer's "lock screen" action (SleepTimer.kt). */
+        @Volatile var instance: FireWatch? = null
         private const val FRONT_CHECK_MS = 800L   // Android 10: how long to wait before checking the move worked
         private const val DEBOUNCE_MS = 1200L   // one jump per press, not one per event
         private const val BOOT_WINDOW_MS = 2 * 60_000L
